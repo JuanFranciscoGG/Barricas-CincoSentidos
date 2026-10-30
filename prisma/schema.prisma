@@ -1,0 +1,507 @@
+// Cinco Sentidos — Barricas platform schema.
+// PostgreSQL (Supabase). Role/status/type fields are plain String columns —
+// allowed values are enforced in app code (see src/lib/enums.ts) — so adding a
+// value never needs a database migration.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Accounts & roles
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String // owner_admin | enologo | comercial | customer
+  customerId   String? // set when role = customer
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  createdAt    DateTime @default(now())
+
+  createdOperations Operation[]        @relation("OperationCreatedBy")
+  createdMedia      MediaItem[]        @relation("MediaUploadedBy")
+  createdMessages   CustomerMessage[]  @relation("MessageSentBy")
+  createdCustomers  Customer[]         @relation("CustomerCreatedBy")
+  createdProjects   WineProject[]      @relation("ProjectCreatedBy")
+  knowledgeEntries  KnowledgeEntry[]   @relation("KnowledgeAuthoredBy")
+}
+
+// ---------------------------------------------------------------------------
+// Customers & projects
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  country   String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  createdById String?
+  createdBy   User?    @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+
+  users    User[]
+  projects WineProject[]
+}
+
+model WineProject {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  name       String
+  variety    String
+  vintage    Int?
+  vineyard   String?
+  origin     String? // free-text display line, e.g. "Agrelo, Luján de Cuyo, Mendoza, Argentina"
+  volumeLiters Float?
+  alcohol      Float?
+  startDate    DateTime?
+  estimatedAgingMonths Int?
+  status       String   @default("planning") // planning | aging | bottled | delivered
+  storyVisible Boolean  @default(false)
+
+  // Knowledge Layer resolution keys (see KnowledgeEntry) — optional, set when a
+  // curated entry exists for this project's origin / variety.
+  originKnowledgeKey  String?
+  varietyKnowledgeKey String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  // Stable public identifier for the NFC/QR "digital home" link — never the
+  // internal cuid, so it can be safely printed on a physical duela.
+  publicToken String @unique @default(cuid())
+
+  createdById String?
+  createdBy   User?    @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+
+  barrels    Barrel[]
+  stages     ProjectStage[]
+  operations Operation[]
+  media      MediaItem[]
+  bottling   BottlingRecord[]
+  notifications    Notification[]
+  messages         CustomerMessage[]
+  story            CustomerStory?
+  gifts            Gift[]
+  storyRevisions   StoryRevision[]
+}
+
+model Barrel {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  number       String  @unique // physical barrel id, e.g. "CS-024"
+  type         String? // e.g. "Barrica bordelesa 225L"
+  brand        String?
+  origin       String? // cooper / forest origin, free text
+  toastLevel   String? // light | medium | medium_plus | heavy
+  volumeLiters Float?
+  contents     String?
+  status       String  @default("filled") // filled | empty | retired
+  photoUrl     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  // Knowledge Layer resolution keys
+  oakOriginKnowledgeKey  String?
+  toastLevelKnowledgeKey String?
+
+  operations Operation[]
+  ownerships BarrelOwnership[]
+  gifts      Gift[]
+  pinTokens  BarrelPinToken[]
+  latestNotes BarrelNote[]
+
+  // One PIN per barrel, shared by every owner assigned to it. Only a bcrypt
+  // verifier is stored. It proves access to the barrel, NOT who the person is.
+  pinHash           String?
+  pinSetAt          DateTime?
+  failedPinAttempts Int       @default(0)
+  lockedUntil       DateTime?
+  // Bumped on PIN reset / permission changes / revocation: every private
+  // session for this barrel stops working immediately.
+  sessionVersion    Int       @default(0)
+  // Admin kill-switch for protected actions on this barrel.
+  accessRevoked     Boolean   @default(false)
+}
+
+model ProjectStage {
+  id        String   @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  name        String
+  sortOrder   Int      @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  operations Operation[]
+}
+
+// ---------------------------------------------------------------------------
+// Operations — the flexible workflow engine (§08 of the discovery doc)
+// ---------------------------------------------------------------------------
+
+model OperationType {
+  id                     String  @id @default(cuid())
+  name                   String  @unique // e.g. "Trasiego", "Control organoléptico"
+  defaultCustomerVisible Boolean @default(false)
+  icon                   String?
+  color                  String?
+  createdAt              DateTime @default(now())
+
+  // Editable catalog (see src/lib/operation-catalog.ts). Types are archived
+  // (active=false) rather than deleted once operations reference them, so
+  // history always keeps its label.
+  description String?
+  category    String  @default("recurring") // initial | recurring | conditional | final
+  sortOrder   Int     @default(0)
+  active      Boolean @default(true)
+  // Stable behavior hook that survives renames: "lab" shows lab fields,
+  // "bottling" redirects into the bottling record form.
+  systemKey   String? @unique
+
+  operations Operation[]
+}
+
+model Operation {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  stageId String?
+  stage   ProjectStage? @relation(fields: [stageId], references: [id])
+
+  barrelId String?
+  barrel   Barrel? @relation(fields: [barrelId], references: [id])
+
+  operationTypeId String
+  operationType   OperationType @relation(fields: [operationTypeId], references: [id])
+
+  date            DateTime
+  notes           String?
+  completed       Boolean  @default(true) // false + future date == a "task"
+  customerVisible Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  // Automatic moments (§ discovery doc): staff tick one box on an operation
+  // that already happened instead of maintaining a separate storytelling
+  // system. When featured, customerHeadline/customerNote (if set) replace the
+  // raw internal operation-type name/notes in the customer-facing feed.
+  featured        Boolean  @default(false)
+  customerHeadline String?
+  customerNote     String?
+
+  createdById String?
+  createdBy   User?    @relation("OperationCreatedBy", fields: [createdById], references: [id])
+
+  labControl LabControl?
+  media      MediaItem[]
+}
+
+model LabControl {
+  id          String @id @default(cuid())
+  operationId String @unique
+  operation   Operation @relation(fields: [operationId], references: [id])
+
+  brix         Float?
+  ph           Float?
+  totalSo2     Float?
+  volatileAcid Float?
+  sensoryNotes String?
+  createdAt    DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Media, bottling, notifications, story
+// ---------------------------------------------------------------------------
+
+model MediaItem {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  operationId String?
+  operation   Operation? @relation(fields: [operationId], references: [id])
+
+  url             String
+  type            String // photo | video
+  caption         String?
+  customerVisible Boolean  @default(false)
+  capturedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  uploadedById String?
+  uploadedBy   User?    @relation("MediaUploadedBy", fields: [uploadedById], references: [id])
+}
+
+model BottlingRecord {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  bottlingDate    DateTime
+  litersObtained  Float?
+  bottleCount     Int?
+  bottleFormat    String  @default("750ml")
+  labelStatus     String  @default("undecided") // undecided | standard | personalized | in_progress
+  photoUrl        String?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model Notification {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  message   String
+  channel   String   @default("app") // app | email | manual
+  sentAt    DateTime @default(now())
+}
+
+model CustomerMessage {
+  id        String @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  body      String
+  sentAt    DateTime @default(now())
+
+  sentById String?
+  sentBy   User?    @relation("MessageSentBy", fields: [sentById], references: [id])
+}
+
+model CustomerStory {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  text      String
+  visible   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Contextual Knowledge Layer (§21 of the discovery doc)
+// ---------------------------------------------------------------------------
+
+model KnowledgeTopic {
+  id        String @id @default(cuid())
+  key       String @unique // region | variety | oak_origin | toast_level | vintage | aging_band
+  label     String
+  sortOrder Int    @default(0) // display order on the main Knowledge screen — admin-configurable
+
+  entries KnowledgeEntry[]
+}
+
+model KnowledgeEntry {
+  id      String @id @default(cuid())
+  topicId String
+  topic   KnowledgeTopic @relation(fields: [topicId], references: [id])
+
+  key             String  @unique // normalized slug, e.g. "agrelo-lujan-de-cuyo", "malbec"
+  title           String
+  locationLine    String? // secondary line, e.g. "Luján de Cuyo, Mendoza, Argentina"
+  elevationMeters Int? // representative altitude for place entries — drives the origin visualization's marker position; null for non-place entries (grape/oak/toast/aging)
+  teaser          String? // one-sentence "why this matters" hook, shown collapsed
+  factChips    String // JSON-encoded array of { label, value }
+  narrative    String
+  // JSON-encoded array of { label, url } — internal only, for staff to review
+  // and update the content later. Never rendered to customers.
+  sources      String?
+  status       String  @default("draft") // draft | published | archived
+  sortOrder    Int     @default(0) // display order within its category
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  authoredById String?
+  authoredBy   User?    @relation("KnowledgeAuthoredBy", fields: [authoredById], references: [id])
+
+  pairingsAsA KnowledgePairing[] @relation("PairingEntryA")
+  pairingsAsB KnowledgePairing[] @relation("PairingEntryB")
+}
+
+model KnowledgePairing {
+  id String @id @default(cuid())
+
+  entryAId String // conventionally the variety side
+  entryA   KnowledgeEntry @relation("PairingEntryA", fields: [entryAId], references: [id])
+
+  entryBId String // conventionally the region side
+  entryB   KnowledgeEntry @relation("PairingEntryB", fields: [entryBId], references: [id])
+
+  // Optional — a bare relationship (e.g. Malbec ↔ French Oak) doesn't need
+  // composed prose, only a variety↔region pairing meant for customer copy does.
+  narrative String?
+  status    String @default("draft") // draft | published
+  createdAt DateTime @default(now())
+
+  @@unique([entryAId, entryBId])
+}
+
+// ---------------------------------------------------------------------------
+// Barrel owners, PIN access and bottle gifting
+//
+// Owners are NOT customer accounts and never log in to browse: the public
+// /wine/[token] page stays open to everyone. Protected actions (edit the story,
+// dedicate a bottle) need the barrel's shared PIN, and gifts additionally record
+// which owner is the giver. The NFC token is never proof of ownership.
+// ---------------------------------------------------------------------------
+
+model Owner {
+  id    String  @id @default(cuid())
+  name  String
+  email String?
+  phone String?
+
+  // active | disabled. A disabled owner cannot be selected as a gift giver
+  // anywhere; their history stays intact.
+  status String @default("active")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+
+  assignments BarrelOwnership[]
+  gifts       Gift[]
+}
+
+// Many-to-many link between owners and barrels, with per-assignment
+// permissions and bottle allocation. endedAt = null means active. A partial
+// unique index (see the migration) forbids two ACTIVE rows for the same
+// (barrel, owner); history rows are kept forever.
+model BarrelOwnership {
+  id       String @id @default(cuid())
+  barrelId String
+  barrel   Barrel @relation(fields: [barrelId], references: [id])
+  ownerId  String
+  owner    Owner  @relation(fields: [ownerId], references: [id])
+
+  // Bottles this owner may dedicate from this barrel. Remaining =
+  // allocation minus the completed gifts recorded against this assignment.
+  allocation   Int     @default(0)
+  canEditStory Boolean @default(true)
+  canGift      Boolean @default(true)
+
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  endedReason  String?
+  assignedById String?
+
+  gifts Gift[]
+
+  @@index([barrelId])
+  @@index([ownerId])
+}
+
+// Single-use token to set (or re-set) a barrel's shared PIN. Only a SHA-256
+// hash is stored.
+model BarrelPinToken {
+  id       String @id @default(cuid())
+  barrelId String
+  barrel   Barrel @relation(fields: [barrelId], references: [id])
+
+  purpose     String // activation | reset
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String?
+
+  @@index([barrelId])
+}
+
+// A digital dedication of one bottle, attributed to the owner selected at the
+// time (the shared PIN does not prove identity) and counted against that
+// owner's allocation on this barrel. Gifts are never deleted or overwritten.
+model Gift {
+  id        String      @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+  barrelId  String
+  barrel    Barrel      @relation(fields: [barrelId], references: [id])
+  ownerId   String
+  owner     Owner       @relation(fields: [ownerId], references: [id])
+  // The allocation (owner x barrel assignment) this bottle was deducted from.
+  assignmentId String?
+  assignment   BarrelOwnership? @relation(fields: [assignmentId], references: [id])
+
+  recipientName  String
+  message        String?
+  status         String   @default("completed") // completed
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([projectId])
+  @@index([ownerId])
+  @@index([assignmentId])
+}
+
+model StoryRevision {
+  id        String      @id @default(cuid())
+  projectId String
+  project   WineProject @relation(fields: [projectId], references: [id])
+
+  text      String
+  visible   Boolean
+  actorType String // owner | staff
+  actorId   String?
+  actorName String?
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorType  String // staff | owner | system
+  actorId    String?
+  actorName  String?
+  action     String
+  targetType String?
+  targetId   String?
+  details    String? // JSON, never contains PINs or tokens
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// "Lo último" notes — short winery-published updates for a barrel, independent
+// of formal tasks (Operation). The public page shows whichever is newer: the
+// latest featured task/moment or the latest note. A note never creates a task,
+// touches the task history or adds a stage.
+// ---------------------------------------------------------------------------
+
+model BarrelNote {
+  id       String @id @default(cuid())
+  barrelId String
+  barrel   Barrel @relation(fields: [barrelId], references: [id])
+
+  title       String
+  body        String?
+  publishedAt DateTime @default(now())
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([barrelId, publishedAt])
+}

@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #efe8da;
+  --bg-alt: #e6dfd0;
+  --surface: #f6f1e7;
+  --surface-2: #fbf8f1;
+  --ink: #2b2725;
+  --ink-soft: #5a534c;
+  --ink-faint: #6f665b;
+  --line: #dbd3c4;
+  --line-strong: #c4bba9;
+  --brass: #7a2430;
+  --brass-strong: #7a2430;
+  --brass-tint: #efe0da;
+  --deep: #2b2725;
+  --deep-2: #7a2430;
+  --deep-ink: #efe8da;
+  --sev-high: #8f2a2a;
+  --sev-high-bg: #f3e2dd;
+  --sev-med: #8a6a1e;
+  --sev-med-bg: #f1e8cc;
+  --sev-low: #3e6b4e;
+  --sev-low-bg: #dfebe2;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-alt: var(--bg-alt);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brass: var(--brass);
+  --color-brass-strong: var(--brass-strong);
+  --color-brass-tint: var(--brass-tint);
+  --color-deep: var(--deep);
+  --color-deep-2: var(--deep-2);
+  --color-deep-ink: var(--deep-ink);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-bg: var(--sev-high-bg);
+  --color-sev-med: var(--sev-med);
+  --color-sev-med-bg: var(--sev-med-bg);
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-bg: var(--sev-low-bg);
+
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-sans: Georgia, "Times New Roman", serif;
+  --font-mono: Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--brass);
+  color: var(--surface-2);
+}
+
+/* ---- Owner dashboard: same identity as the client page, tuned for data entry ---- */
+.dash h1 {
+  font-weight: 400;
+  font-size: clamp(2rem, 4.5vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.dash .uppercase {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  letter-spacing: 0.16em;
+}
+.dash .rounded-md,
+.dash .rounded-lg,
+.dash .rounded-xl {
+  border-radius: 0;
+}
+.dash a:focus-visible,
+.dash button:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash * {
+    transition-duration: 1ms !important;
+    animation: none !important;
+  }
+}

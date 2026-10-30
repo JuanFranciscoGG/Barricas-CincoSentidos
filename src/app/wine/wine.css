@@ -1,0 +1,197 @@
+/* Design tokens and component classes for the public /wine/[token] barrel
+   experience only. Scoped under .cs-scope so nothing here can leak into or
+   be affected by the dashboard's tokens in ../globals.css. Sourced from the
+   "Cinco Sentidos" design (Claude Design import). */
+
+.cs-scope {
+  --cs-cellar: #1f1b19;
+  --cs-cellar-2: #2b2725;
+  --cs-paper: #efe8da;
+  --cs-paper-2: #f6f1e7;
+  --cs-ink: #2b2725;
+  --cs-ink-soft: #5a534c;
+  --cs-ink-faint: #6f665b;
+  --cs-line: rgba(43, 39, 37, 0.14);
+  --cs-line-strong: rgba(43, 39, 37, 0.22);
+  --cs-cream: #f3ebe0;
+  --cs-cream-soft: rgba(239, 234, 224, 0.55);
+  --cs-cream-faint: rgba(239, 234, 224, 0.35);
+  --cs-wine: #7a2430;
+  --cs-brass: #a8956a;
+  --cs-brass-2: #d9cba6;
+
+  background: var(--cs-paper);
+  color: var(--cs-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.cs-scope a {
+  color: var(--cs-wine);
+  text-decoration: none;
+}
+.cs-scope a:hover {
+  color: var(--cs-brass);
+}
+.cs-scope button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cs-scope ::selection {
+  background: rgba(107, 31, 38, 0.18);
+}
+
+/* Full-bleed editorial page; sections center themselves in .cs-wrap. */
+.cs-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-left: clamp(20px, 5vw, 56px);
+  padding-right: clamp(20px, 5vw, 56px);
+}
+
+@keyframes cs-cue {
+  0% { transform: scaleY(0); transform-origin: top; }
+  45% { transform: scaleY(1); transform-origin: top; }
+  55% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-scope * { animation: none !important; transition-duration: 1ms !important; }
+}
+
+.cs-sans {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+
+.cs-eyebrow {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: var(--cs-ink-faint);
+}
+.cs-eyebrow--dark {
+  color: var(--cs-cream-soft);
+}
+.cs-eyebrow--wine {
+  color: var(--cs-wine);
+}
+
+/* Secondary metadata label — dates, counts, signatures. Distinct from
+   .cs-eyebrow (section kickers): smaller tracking, lower emphasis. */
+.cs-meta {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--cs-ink-faint);
+}
+.cs-meta--dark {
+  color: rgba(239, 234, 224, 0.45);
+}
+
+@keyframes cs-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cs-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+.cs-fade-in {
+  animation: cs-fade 0.5s ease;
+}
+.cs-breathe {
+  animation: cs-breathe 3.6s ease-in-out infinite;
+}
+
+/* Scroll reveal — Reveal.tsx toggles data-revealed */
+.cs-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 900ms cubic-bezier(0.22, 0.7, 0.3, 1),
+    transform 900ms cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+.cs-reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.cs-hr {
+  height: 2px;
+  border: 0;
+  background: var(--cs-ink);
+}
+
+/* Tap-to-reveal accordion (barrel facts, discover modules) */
+.cs-accordion-row + .cs-accordion-row {
+  border-top: 1px solid var(--cs-line-strong);
+}
+.cs-accordion-row[data-on-dark="true"] + .cs-accordion-row[data-on-dark="true"] {
+  border-top-color: rgba(239, 234, 224, 0.16);
+}
+.cs-accordion-row {
+  transition: opacity 0.2s ease;
+}
+.cs-accordion-row:active {
+  opacity: 0.6;
+}
+
+/* Gallery card — subtle lift on tap/hover, never on the image itself so the
+   crop stays put and only the card's shadow/position read as "pressed". */
+.cs-gallery-card {
+  transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+.cs-gallery-card:active {
+  transform: translateY(2px);
+}
+@media (hover: hover) {
+  .cs-gallery-card:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* Chapter index floating button + overlay */
+.cs-index-btn {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cs-ink);
+  color: var(--cs-paper);
+  padding: 14px 20px;
+  min-height: 48px;
+  box-shadow: 0 10px 30px rgba(20, 16, 14, 0.32);
+}
+
+.cs-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #0c0907;
+}
+
+/* Gallery scroller — hide scrollbar, keep native momentum scroll */
+.cs-scroller {
+  scrollbar-width: none;
+}
+.cs-scroller::-webkit-scrollbar {
+  display: none;
+}
