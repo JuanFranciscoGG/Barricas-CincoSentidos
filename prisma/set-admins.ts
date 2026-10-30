@@ -1,50 +1,33 @@
-// Sets the administrator logins and disables every other staff login.
-//   ADMIN1_PASSWORD=... ADMIN2_PASSWORD=... npm run db:admins
-// An admin whose password variable is not set is skipped (its existing login is left untouched).
-// Run it against the target database (DATABASE_URL), including production. Passwords come
-// from the environment only — they are never stored in the repo, and only a bcrypt hash is
-// written to the database. Safe to re-run (also how a password is changed or recovered).
+// Sets the administrator login and disables every other staff login.
+//   ADMIN_EMAIL=... ADMIN_NAME=... ADMIN_PASSWORD=... npm run db:admins
+// ADMIN_EMAIL (default "prueba") is the login name, an email or a plain username. ADMIN_PASSWORD is
+// required. Run it against the target database (DATABASE_URL), including production. The password
+// comes from the environment only — it is never stored in the repo, and only a bcrypt hash is written
+// to the database. Safe to re-run (also how a password is changed or recovered).
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 
-const ADMINS = [
-  // legacyEmail: the existing Dirección account is renamed (same row, same id) so the history it created stays attributed.
-  { email: "manuval@finca-algarve.com.ar", name: "Manuel Valdez", passwordEnv: "ADMIN1_PASSWORD", legacyEmail: "manuel@cincosentidos.com.ar" },
-  { email: "juanfragiugno@cinco-sentidos.com.ar", name: "Juan Fragiugno", passwordEnv: "ADMIN2_PASSWORD", legacyEmail: null },
-];
+const email = (process.env.ADMIN_EMAIL ?? "prueba").trim().toLowerCase();
+const name = process.env.ADMIN_NAME?.trim() || "Usuario de prueba";
 
 async function main() {
-  let ready = 0;
-  for (const admin of ADMINS) {
-    const password = process.env[admin.passwordEnv]; // an env var is always a string, so "0152" keeps its leading zero
-    if (typeof password !== "string" || password.length === 0) {
-      console.log(`skipped (${admin.passwordEnv} not set): ${admin.email}`);
-      continue;
-    }
-    ready++;
-    const passwordHash = await bcrypt.hash(password, 10);
-    const current = await prisma.user.findUnique({ where: { email: admin.email } });
-    const legacy = !current && admin.legacyEmail ? await prisma.user.findUnique({ where: { email: admin.legacyEmail } }) : null;
-    if (current || legacy) {
-      await prisma.user.update({
-        where: { id: (current ?? legacy)!.id },
-        data: { email: admin.email, name: admin.name, role: "owner_admin", passwordHash, customerId: null },
-      });
-    } else {
-      await prisma.user.create({ data: { email: admin.email, name: admin.name, role: "owner_admin", passwordHash } });
-    }
-    console.log(`admin ready: ${admin.email}`);
-  }
+  const password = process.env.ADMIN_PASSWORD; // an env var is always a string, so "0152" keeps its leading zero
+  if (typeof password !== "string" || password.length === 0) throw new Error("ADMIN_PASSWORD is not set.");
 
-  if (ready === 0) throw new Error("Set ADMIN1_PASSWORD and/or ADMIN2_PASSWORD.");
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.upsert({
+    where: { email },
+    update: { name, role: "owner_admin", passwordHash, customerId: null },
+    create: { email, name, role: "owner_admin", passwordHash },
+  });
+  console.log(`admin ready: ${email}`);
 
-  // Obsolete staff logins keep their rows (operations and knowledge entries reference them) but get an
+  // Other staff logins keep their rows (operations and knowledge entries reference them) but get an
   // unusable password, so nobody can sign in with them. Customers are not touched.
-  const keep = ADMINS.map((a) => a.email);
   const obsolete = await prisma.user.findMany({
-    where: { role: { in: ["owner_admin", "enologo", "comercial"] }, email: { notIn: keep } },
+    where: { role: { in: ["owner_admin", "enologo", "comercial"] }, email: { not: email } },
     select: { id: true, email: true },
   });
   for (const u of obsolete) {

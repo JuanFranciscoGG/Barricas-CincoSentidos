@@ -7,13 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test src/lib/owners/service.test.ts src/lib/barrel-cover.test.ts src/lib/project-edit.test.ts src/lib/barrel-notes.test.ts src/lib/barrel-today.test.ts src/lib/operation-catalog.test.ts src/lib/upload-access.test.ts",
+    "test": "node --import tsx --test src/lib/owners/service.test.ts src/lib/barrel-cover.test.ts src/lib/project-edit.test.ts src/lib/barrel-notes.test.ts src/lib/barrel-today.test.ts src/lib/operation-catalog.test.ts src/lib/upload-access.test.ts src/lib/prompt.test.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:admins": "tsx prisma/set-admins.ts",
     "db:storage": "tsx prisma/setup-storage.ts",
     "db:seed": "tsx prisma/seed.ts",
-    "db:setup": "prisma migrate deploy && tsx prisma/set-admins.ts && tsx prisma/setup-storage.ts && tsx prisma/seed.ts"
+    "db:setup": "prisma migrate deploy && tsx prisma/set-admins.ts && tsx prisma/setup-storage.ts && tsx prisma/seed.ts",
+    "db:users": "tsx prisma/users.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

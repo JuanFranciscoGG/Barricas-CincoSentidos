@@ -5,7 +5,7 @@ import { agingDays, buildBarrelToday } from "./barrel-today";
 import { todayFileName, TODAY_H, TODAY_SCALE, TODAY_W } from "../components/wine/barrelToday";
 
 const barrel = { number: "CS-024", photoUrl: null as string | null };
-const project = { name: "El Malbec de Juan", variety: "Malbec", vintage: 2025 as number | null, startDate: new Date(2026, 1, 1) as Date | null };
+const project = { name: "El Malbec Demo", variety: "Malbec", vintage: 2025 as number | null, startDate: new Date(2026, 1, 1) as Date | null };
 const day = (y: number, m: number, d: number) => new Date(y, m - 1, d);
 
 describe("aging days", () => {
@@ -30,7 +30,7 @@ describe("barrel today data", () => {
   it("carries the right barrel and wine identity", () => {
     const d = buildBarrelToday({ barrel, project, latestMoment: null, latestNote: null });
     assert.equal(d.barrelNumber, "CS-024");
-    assert.equal(d.wineName, "El Malbec de Juan");
+    assert.equal(d.wineName, "El Malbec Demo");
     assert.equal(d.variety, "Malbec");
     assert.equal(d.vintage, 2025);
     assert.equal(d.startDate, project.startDate!.toISOString());

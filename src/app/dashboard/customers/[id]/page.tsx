@@ -76,7 +76,7 @@ export default async function CustomerDetailPage({
           <form action={createProject} className="flex flex-col gap-3 mt-3">
             <input type="hidden" name="customerId" value={customer.id} />
             <Field label="Nombre del proyecto" htmlFor="name">
-              <Input id="name" name="name" placeholder="Ej. El Malbec de Juan" required />
+              <Input id="name" name="name" placeholder="Ej. El Malbec Demo" required />
             </Field>
             <Field label="Variedad" htmlFor="variety">
               <Input id="variety" name="variety" placeholder="Malbec" required />

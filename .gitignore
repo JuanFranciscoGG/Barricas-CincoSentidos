@@ -66,3 +66,6 @@ skills-lock.json
 
 .claude/
 .windsurf/
+
+# the template must be committed
+!.env.example

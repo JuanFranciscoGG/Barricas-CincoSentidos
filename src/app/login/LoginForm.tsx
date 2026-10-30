@@ -13,8 +13,8 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
-      <Field label="Email" htmlFor="email">
-        <Input id="email" name="email" type="email" autoComplete="username" required />
+      <Field label="Usuario o email" htmlFor="email">
+        <Input id="email" name="email" type="text" autoComplete="username" required />
       </Field>
       <Field label="Contraseña" htmlFor="password">
         <Input id="password" name="password" type="password" autoComplete="current-password" required />

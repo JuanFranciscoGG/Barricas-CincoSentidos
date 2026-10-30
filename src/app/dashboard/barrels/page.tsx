@@ -55,7 +55,7 @@ export default async function BarrelsPage() {
               </Select>
             </Field>
             <Field label="Nombre del vino" htmlFor="name">
-              <Input id="name" name="name" placeholder="Ej. El Malbec de Juan" required />
+              <Input id="name" name="name" placeholder="Ej. El Malbec Demo" required />
             </Field>
             <Field label="Variedad" htmlFor="variety">
               <Input id="variety" name="variety" placeholder="Malbec" required />

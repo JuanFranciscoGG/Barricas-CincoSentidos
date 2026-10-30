@@ -5,7 +5,7 @@
 //                              `npm run db:admins` first: the knowledge entries are authored by an
 //                              administrator.
 //   SEED_DEMO=1 npm run db:seed   Also creates demo staff logins (shared password) and the demo
-//                              project "El Malbec de Juan" (barrel CS-024). NEVER run this in production.
+//                              project "El Malbec Demo" (barrel CS-024). NEVER run this in production.
 /* eslint-disable no-console */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
@@ -38,33 +38,33 @@ function date(iso: string) {
 async function createDemoStaff() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   const owner = await prisma.user.upsert({
-    where: { email: "manuel@cincosentidos.com.ar" },
+    where: { email: "admin.demo@example.com" },
     update: {},
     create: {
-      email: "manuel@cincosentidos.com.ar",
-      name: "Manuel Valdez",
+      email: "admin.demo@example.com",
+      name: "Admin Demo",
       role: "owner_admin",
       passwordHash,
     },
   });
 
   const enologo = await prisma.user.upsert({
-    where: { email: "rodrigo@cincosentidos.com.ar" },
+    where: { email: "enologo.demo@example.com" },
     update: {},
     create: {
-      email: "rodrigo@cincosentidos.com.ar",
-      name: "Rodrigo Gasparoni",
+      email: "enologo.demo@example.com",
+      name: "Enólogo Demo",
       role: "enologo",
       passwordHash,
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "comercial@cincosentidos.com.ar" },
+    where: { email: "comercial.demo@example.com" },
     update: {},
     create: {
-      email: "comercial@cincosentidos.com.ar",
-      name: "Julia Ibáñez",
+      email: "comercial.demo@example.com",
+      name: "Comercial Demo",
       role: "comercial",
       passwordHash,
     },
@@ -621,11 +621,11 @@ async function main() {
   // project's publicToken (the /wine/[token] URL), not an account.
   // ---------------------------------------------------------------------
   const customer = await prisma.customer.upsert({
-    where: { email: "juanfragiugno@gmail.com" },
+    where: { email: "cliente.demo@example.com" },
     update: {},
     create: {
-      name: "Juan Fragiugno",
-      email: "juanfragiugno@gmail.com",
+      name: "Cliente Demo",
+      email: "cliente.demo@example.com",
       country: "Estados Unidos",
       createdById: owner.id,
     },
@@ -634,13 +634,13 @@ async function main() {
   const startDate = date("2026-02-01");
 
   const project = await prisma.wineProject.upsert({
-    where: { id: "seed-project-juan-malbec" },
+    where: { id: "seed-project-demo-malbec" },
     update: { publicToken: "demo-cs024" },
     create: {
-      id: "seed-project-juan-malbec",
+      id: "seed-project-demo-malbec",
       publicToken: "demo-cs024",
       customerId: customer.id,
-      name: "El Malbec de Juan",
+      name: "El Malbec Demo",
       variety: "Malbec",
       vintage: 2025,
       vineyard: "Finca Agrelo",
@@ -838,7 +838,7 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log(`Staff login: manuel@cincosentidos.com.ar / ${DEMO_PASSWORD}`);
+  console.log(`Staff login: admin.demo@example.com / ${DEMO_PASSWORD}`);
   console.log(`Public barrel URL: /wine/${project.publicToken}`);
 }
 

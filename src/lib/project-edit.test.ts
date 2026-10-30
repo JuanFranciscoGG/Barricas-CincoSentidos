@@ -11,7 +11,7 @@ let edit: Edit;
 let prisma: Db["prisma"];
 
 const base = {
-  name: "El Malbec de Juan",
+  name: "El Malbec Demo",
   variety: "Malbec",
   vintage: "2025",
   vineyard: "",

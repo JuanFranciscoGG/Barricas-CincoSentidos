@@ -23,19 +23,19 @@ that document for the full architecture, data model and phased plan.
 
 ```bash
 npm install            # also runs `prisma generate`
-ADMIN1_PASSWORD=... ADMIN2_PASSWORD=... npm run db:setup
+ADMIN_PASSWORD=... npm run db:setup
 npm run dev
 ```
 
-`npm run db:setup` runs, in order: `db:migrate` (creates the tables), `db:admins` (the two
-administrator logins), `db:storage` (creates the private photo bucket) and `db:seed` (reference
+`npm run db:setup` runs, in order: `db:migrate` (creates the tables), `db:admins` (the administrator
+login), `db:storage` (creates the private photo bucket) and `db:seed` (reference
 data: operation catalog and Knowledge Layer). Each one can also be run on its own and is safe to
-re-run. An administrator whose `ADMINx_PASSWORD` is not set is skipped.
+re-run.
 
 Open http://localhost:3000 (Next prints another port if 3000 is busy). Staff sign in at `/login`.
 
 **Demo data (never in production):** `SEED_DEMO=1 npm run db:seed` also creates demo staff logins
-with a shared password and one demo project ("El Malbec de Juan", barrel `CS-024`).
+with a shared password and one demo project ("El Malbec Demo", barrel `CS-024`).
 
 ### Tests
 
@@ -45,9 +45,17 @@ Use a development Supabase project for this, not production.
 
 ### Staff logins
 
-Passwords are stored only as bcrypt hashes. To change or recover an administrator password, re-run
-`ADMINx_PASSWORD=... npm run db:admins`. Administrators: `manuval@finca-algarve.com.ar` and
-`juanfragiugno@cinco-sentidos.com.ar` (see `prisma/set-admins.ts`).
+Logins live in the database (`User` table, bcrypt hash only). Manage them from your own terminal:
+
+```bash
+npm run db:users list                 # who can sign in
+npm run db:users add                  # create a login, or change a password / name / role
+npm run db:users disable <login>      # block a login
+```
+
+`add` asks for the username (or email), name, role and a hidden password (10+ characters). Nothing is
+written to files or shell history. The very first administrator can also be created non-interactively
+with `ADMIN_PASSWORD=... npm run db:admins` (see `prisma/set-admins.ts`), which is what `db:setup` uses.
 
 ### Changing the database schema
 
